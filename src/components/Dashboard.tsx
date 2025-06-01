@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,15 +12,31 @@ import {
   User,
   LogOut,
   Menu,
-  X
+  X,
+  BarChart3, 
+  Users, 
+  MessageSquare, 
+  Calendar,
+  Plus,
+  ChevronDown,
+  Server,
+  Rocket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import FigmaIntegration from './dashboard/FigmaIntegration';
 import DevMode from './dashboard/DevMode';
 import DeckBoards from './dashboard/DeckBoards';
+import Deck from './dashboard/Deck';
 import DesignDesk from './dashboard/DesignDesk';
 import Documents from './dashboard/Documents';
+import Analytics from './dashboard/Analytics';
+import TeamManagement from './dashboard/TeamManagement';
+import Communications from './dashboard/Communications';
+import ProjectManagement from './dashboard/ProjectManagement';
+import Deployment from './dashboard/Deployment';
+import NotificationCenter from './dashboard/NotificationCenter';
 
 interface DashboardProps {
   user: { email: string; name?: string };
@@ -29,38 +44,29 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
-  const [activeTab, setActiveTab] = useState('figma');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   const tabs = [
-    { id: 'figma', name: 'Figma Integration', icon: Palette, color: 'from-pink-500 to-rose-500' },
-    { id: 'dev', name: 'Dev Mode', icon: GitBranch, color: 'from-green-500 to-emerald-500' },
-    { id: 'deck', name: 'Deck Boards', icon: Presentation, color: 'from-blue-500 to-cyan-500' },
-    { id: 'design', name: 'Design Desk', icon: Video, color: 'from-purple-500 to-violet-500' },
-    { id: 'docs', name: 'Documents', icon: FileText, color: 'from-yellow-500 to-orange-500' },
+    { id: 'analytics', name: 'Analytics', icon: BarChart3, component: Analytics },
+    { id: 'team', name: 'Team Management', icon: Users, component: TeamManagement },
+    { id: 'communications', name: 'Communications', icon: MessageSquare, component: Communications },
+    { id: 'projects', name: 'Project Management', icon: Calendar, component: ProjectManagement },
+    { id: 'deployment', name: 'Deployment', icon: Rocket, component: Deployment },
+    { id: 'deck', name: 'Deck (Meetings)', icon: Video, component: Deck },
+    { id: 'documents', name: 'Documents', icon: FileText, component: Documents },
   ];
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'figma':
-        return <FigmaIntegration />;
-      case 'dev':
-        return <DevMode />;
-      case 'deck':
-        return <DeckBoards />;
-      case 'design':
-        return <DesignDesk />;
-      case 'docs':
-        return <Documents />;
-      default:
-        return <FigmaIntegration />;
-    }
-  };
+  const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || Analytics;
 
   const userName = user.name || user.email.split('@')[0];
 
+  // Mock unread notification count
+  const unreadNotifications = 2;
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex relative">
       {/* Sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -69,13 +75,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -300, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="w-80 bg-white shadow-xl border-r border-gray-200 flex flex-col"
+            className="w-80 bg-white shadow-xl border-r border-gray-200 flex flex-col z-30"
           >
             {/* Header */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Development Desk
+                  DevDesk Nexus Hub
                 </h1>
                 <Button
                   variant="ghost"
@@ -100,26 +106,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-2">
-              {tabs.map((tab, index) => (
+              {tabs.map((tab) => (
                 <motion.button
                   key={tab.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                  className={`flex items-center space-x-3 w-full px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-lg'
-                      : 'hover:bg-gray-100 text-gray-700'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'}`} />
+                  <tab.icon className="w-5 h-5" />
                   <span className="font-medium">{tab.name}</span>
-                  {activeTab === tab.id && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="ml-auto w-2 h-2 bg-white rounded-full"
-                    />
+                  {tab.id === 'deployment' && (
+                    <Badge className="bg-green-100 text-green-800 text-xs">New</Badge>
                   )}
                 </motion.button>
               ))}
@@ -152,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 relative z-20">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {!sidebarOpen && (
@@ -173,8 +175,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="sm" className="text-gray-500">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-500 relative"
+                onClick={() => setNotificationOpen(true)}
+              >
                 <Bell className="w-4 h-4" />
+                {unreadNotifications > 0 && (
+                  <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center p-0">
+                    {unreadNotifications}
+                  </Badge>
+                )}
               </Button>
               <Button variant="ghost" size="sm" className="text-gray-500">
                 <Settings className="w-4 h-4" />
@@ -194,11 +206,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               transition={{ duration: 0.3 }}
               className="h-full"
             >
-              {renderTabContent()}
+              <ActiveComponent />
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={notificationOpen} 
+        onClose={() => setNotificationOpen(false)} 
+      />
     </div>
   );
 };

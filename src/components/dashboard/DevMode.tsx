@@ -1,269 +1,341 @@
-
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GitBranch, 
-  GitCommit, 
-  GitMerge, 
-  Terminal, 
   Play, 
   Pause, 
-  Settings,
+  RotateCcw, 
+  Settings, 
+  Users, 
+  Building2,
+  Shield,
+  Activity,
+  Clock,
   CheckCircle,
   XCircle,
-  Clock,
-  Users,
-  Code,
-  Database
+  AlertCircle,
+  Eye,
+  Download,
+  ExternalLink,
+  Plus,
+  Filter,
+  Search,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+import { useGitHub } from '@/hooks/useGitHub';
+
+// Import actual components
+import GitHubAuth from './GitHubAuth';
+import RepositorySelector from './RepositorySelector';
+import WorkflowManager from './WorkflowManager';
+import PipelineConfiguration from './PipelineConfiguration';
+import BuildHistory from './BuildHistory';
+import OrganizationOverview from './OrganizationOverview';
+import SecuritySettings from './SecuritySettings';
 
 const DevMode: React.FC = () => {
-  const [activeRepo, setActiveRepo] = useState('main-app');
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [refreshing, setRefreshing] = useState(false);
 
-  const repositories = [
-    { id: 'main-app', name: 'main-app', branch: 'main', status: 'active' },
-    { id: 'api-service', name: 'api-service', branch: 'development', status: 'building' },
-    { id: 'ui-components', name: 'ui-components', branch: 'feature/new-buttons', status: 'idle' },
-  ];
+  // GitHub integration state
+  const {
+    authState,
+    organizations,
+    repositories,
+    workflows,
+    workflowRuns,
+    branches,
+    selectedRepository,
+    selectedOrganization,
+    selectRepository,
+    selectOrganization,
+    isLoading,
+    hasError,
+    userError,
+    organizationsError,
+    repositoriesError,
+    workflowsError,
+    workflowRunsError,
+    triggerWorkflow,
+    getWorkflowRunDetails,
+    getWorkflowRunLogs,
+    cancelWorkflowRun,
+    rerunWorkflowRun,
+    isTriggeringWorkflow,
+    refetchUser,
+  } = useGitHub({
+    oauthConfig: {
+      clientId: import.meta.env.VITE_GITHUB_CLIENT_ID || '',
+      clientSecret: import.meta.env.VITE_GITHUB_CLIENT_SECRET || '',
+      redirectUri: `${window.location.origin}/auth/github/callback`,
+      scopes: ['repo', 'read:org', 'read:user', 'user:email', 'workflow'],
+    },
+    enableAutoRefresh: true,
+    enableRealTimeUpdates: true,
+  });
 
-  const pipelines = [
-    {
-      id: 1,
-      name: 'Build & Test',
-      status: 'success',
-      duration: '2m 34s',
-      commit: 'feat: add new user dashboard',
-      author: 'john.doe',
-      branch: 'main'
-    },
-    {
-      id: 2,
-      name: 'Deploy Staging',
-      status: 'running',
-      duration: '1m 12s',
-      commit: 'fix: resolve login issue',
-      author: 'jane.smith',
-      branch: 'development'
-    },
-    {
-      id: 3,
-      name: 'Security Scan',
-      status: 'failed',
-      duration: '45s',
-      commit: 'refactor: update dependencies',
-      author: 'mike.wilson',
-      branch: 'security-updates'
-    },
-  ];
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'running':
-        return <Clock className="w-4 h-4 text-blue-500 animate-spin" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (authState.isAuthenticated) {
+        await refetchUser();
+        // Note: In the actual implementation, you'd need to add refetch methods
+        // for organizations, repositories, etc. to the hook
+      }
+      toast({
+        title: "Data Refreshed",
+        description: "All data has been refreshed successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      success: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
-      running: 'bg-blue-100 text-blue-800',
-      idle: 'bg-gray-100 text-gray-800',
-      building: 'bg-yellow-100 text-yellow-800',
-      active: 'bg-green-100 text-green-800'
-    };
+  const handleTriggerWorkflow = async (workflowId: number, ref: string, inputs?: Record<string, any>) => {
+    if (!selectedRepository) return;
     
-    return variants[status as keyof typeof variants] || variants.idle;
+    try {
+      await triggerWorkflow({
+        workflowId,
+        ref,
+        inputs,
+      });
+    } catch (error) {
+      throw error;
+    }
   };
 
+  const handleGetRunDetails = async (runId: number) => {
+    if (!selectedRepository) return null;
+    
+    return await getWorkflowRunDetails(runId);
+  };
+
+  const handleGetRunLogs = async (runId: number) => {
+    if (!selectedRepository) return '';
+    
+    const logs = await getWorkflowRunLogs(runId);
+    // Convert ArrayBuffer to string
+    return new TextDecoder().decode(logs);
+  };
+
+  const handleCancelRun = async (runId: number) => {
+    if (!selectedRepository) return;
+    
+    await cancelWorkflowRun(runId);
+  };
+
+  const handleRerunWorkflow = async (runId: number) => {
+    if (!selectedRepository) return;
+    
+    await rerunWorkflowRun(runId);
+  };
+
+  // Show authentication screen if not authenticated
+  if (!authState.isAuthenticated) {
+    return <GitHubAuth />;
+  }
+
+  const currentError = hasError ? (userError || organizationsError || repositoriesError || workflowsError || workflowRunsError) : null;
+
   return (
-    <div className="h-full p-6 bg-gray-50 overflow-auto">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Development Operations</h2>
-            <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm">
-                <Settings className="w-4 h-4 mr-2" />
-                Configure
-              </Button>
-              <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                <Terminal className="w-4 h-4 mr-2" />
-                Open Terminal
-              </Button>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="border-b border-gray-200 bg-white px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <GitBranch className="w-6 h-6 text-green-600" />
+              <h1 className="text-2xl font-bold text-gray-900">Dev Mode</h1>
             </div>
+            
+            {/* Repository Selector */}
+            <RepositorySelector
+              organizations={organizations}
+              repositories={repositories}
+              selectedOrganization={selectedOrganization}
+              selectedRepository={selectedRepository}
+              onSelectOrganization={selectOrganization}
+              onSelectRepository={selectRepository}
+              isLoading={isLoading}
+            />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <GitBranch className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-800">Active Branches</span>
-              </div>
-              <p className="text-2xl font-bold text-blue-900">12</p>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             
-            <div className="bg-green-50 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="font-medium text-green-800">Successful Builds</span>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full" />
+                <span>Connected as {authState.user?.login}</span>
               </div>
-              <p className="text-2xl font-bold text-green-900">847</p>
-            </div>
-            
-            <div className="bg-yellow-50 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Clock className="w-5 h-5 text-yellow-600" />
-                <span className="font-medium text-yellow-800">Avg Build Time</span>
-              </div>
-              <p className="text-2xl font-bold text-yellow-900">3m 24s</p>
-            </div>
-            
-            <div className="bg-purple-50 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Users className="w-5 h-5 text-purple-600" />
-                <span className="font-medium text-purple-800">Active Developers</span>
-              </div>
-              <p className="text-2xl font-bold text-purple-900">8</p>
             </div>
           </div>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Repositories */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-          >
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Repositories</h3>
-            <div className="space-y-3">
-              {repositories.map((repo) => (
-                <div
-                  key={repo.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    activeRepo === repo.id 
-                      ? 'border-blue-300 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setActiveRepo(repo.id)}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-800">{repo.name}</span>
-                    <Badge className={getStatusBadge(repo.status)}>
-                      {repo.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <GitBranch className="w-3 h-3" />
-                    <span>{repo.branch}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* CI/CD Pipelines */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">CI/CD Pipelines</h3>
-              <Button variant="outline" size="sm">
-                <Play className="w-4 h-4 mr-2" />
-                Run Pipeline
-              </Button>
-            </div>
-            
-            <div className="space-y-4">
-              {pipelines.map((pipeline) => (
-                <motion.div
-                  key={pipeline.id}
-                  whileHover={{ scale: 1.01 }}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      {getStatusIcon(pipeline.status)}
-                      <span className="font-medium text-gray-800">{pipeline.name}</span>
-                      <Badge className={getStatusBadge(pipeline.status)}>
-                        {pipeline.status}
-                      </Badge>
-                    </div>
-                    <span className="text-sm text-gray-500">{pipeline.duration}</span>
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 mb-2">
-                    <div className="flex items-center space-x-2">
-                      <GitCommit className="w-3 h-3" />
-                      <span>{pipeline.commit}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>by {pipeline.author}</span>
-                    <span>{pipeline.branch}</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
         </div>
+      </div>
 
-        {/* Deployment Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-        >
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Deployment Status</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium">Production</span>
-                <CheckCircle className="w-5 h-5" />
-              </div>
-              <p className="text-sm opacity-90">v2.4.1 - Deployed 2h ago</p>
-              <p className="text-xs opacity-75">99.9% uptime</p>
-            </div>
-            
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium">Staging</span>
-                <Clock className="w-5 h-5 animate-pulse" />
-              </div>
-              <p className="text-sm opacity-90">v2.5.0-beta - Deploying...</p>
-              <p className="text-xs opacity-75">ETA: 3m 15s</p>
-            </div>
-            
-            <div className="bg-gradient-to-r from-purple-500 to-violet-500 rounded-lg p-4 text-white">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium">Development</span>
-                <Code className="w-5 h-5" />
-              </div>
-              <p className="text-sm opacity-90">v2.5.0-dev - Active</p>
-              <p className="text-xs opacity-75">12 active branches</p>
-            </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <div className="border-b border-gray-200 bg-white px-6">
+            <TabsList className="grid w-full grid-cols-6 max-w-4xl">
+              <TabsTrigger value="overview" className="flex items-center space-x-2">
+                <Building2 className="w-4 h-4" />
+                <span>Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="workflows" className="flex items-center space-x-2">
+                <Play className="w-4 h-4" />
+                <span>Workflows</span>
+              </TabsTrigger>
+              <TabsTrigger value="configuration" className="flex items-center space-x-2">
+                <Settings className="w-4 h-4" />
+                <span>Configuration</span>
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span>History</span>
+              </TabsTrigger>
+              <TabsTrigger value="organization" className="flex items-center space-x-2">
+                <Users className="w-4 h-4" />
+                <span>Organization</span>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center space-x-2">
+                <Shield className="w-4 h-4" />
+                <span>Security</span>
+              </TabsTrigger>
+            </TabsList>
           </div>
-        </motion.div>
+
+          <div className="flex-1 overflow-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
+              >
+                <TabsContent value="overview" className="h-full m-0">
+                  <OrganizationOverview
+                    organizations={organizations}
+                    selectedOrganization={selectedOrganization}
+                    onSelectOrganization={selectOrganization}
+                  />
+                </TabsContent>
+
+                <TabsContent value="workflows" className="h-full m-0">
+                  <WorkflowManager
+                    workflows={workflows}
+                    branches={branches}
+                    selectedRepository={selectedRepository}
+                    onTriggerWorkflow={handleTriggerWorkflow}
+                    isTriggeringWorkflow={isTriggeringWorkflow}
+                  />
+                </TabsContent>
+
+                <TabsContent value="configuration" className="h-full m-0">
+                  <PipelineConfiguration
+                    selectedRepository={selectedRepository}
+                    workflows={workflows}
+                    branches={branches}
+                  />
+                </TabsContent>
+
+                <TabsContent value="history" className="h-full m-0">
+                  <BuildHistory
+                    workflowRuns={workflowRuns}
+                    selectedRepository={selectedRepository}
+                    onGetRunDetails={handleGetRunDetails}
+                    onGetRunLogs={handleGetRunLogs}
+                    onCancelRun={handleCancelRun}
+                    onRerunWorkflow={handleRerunWorkflow}
+                  />
+                </TabsContent>
+
+                <TabsContent value="organization" className="h-full m-0">
+                  <OrganizationOverview
+                    organizations={organizations}
+                    selectedOrganization={selectedOrganization}
+                    onSelectOrganization={selectOrganization}
+                  />
+                </TabsContent>
+
+                <TabsContent value="security" className="h-full m-0">
+                  <SecuritySettings
+                    selectedRepository={selectedRepository}
+                    selectedOrganization={selectedOrganization}
+                  />
+                </TabsContent>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </Tabs>
+      </div>
+
+      {/* Status Bar */}
+      <div className="border-t border-gray-200 bg-gray-50 px-6 py-2">
+        <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center space-x-4">
+            {selectedRepository && (
+              <span>
+                Repository: {selectedRepository.owner.login}/{selectedRepository.name}
+              </span>
+            )}
+            {workflows && workflows.length > 0 && (
+              <span>
+                Workflows: {workflows.length}
+              </span>
+            )}
+            {workflowRuns && workflowRuns.length > 0 && (
+              <span>
+                Recent Runs: {workflowRuns.filter(r => r.status === 'in_progress').length} running
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {currentError && (
+              <div className="flex items-center space-x-1 text-red-600">
+                <AlertCircle className="w-4 h-4" />
+                <span>Error: {currentError.message}</span>
+              </div>
+            )}
+            
+            {isLoading && (
+              <div className="flex items-center space-x-1">
+                <Activity className="w-4 h-4 animate-spin" />
+                <span>Loading...</span>
+              </div>
+            )}
+            
+            <span>Last updated: {new Date().toLocaleTimeString()}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

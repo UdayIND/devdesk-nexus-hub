@@ -1,73 +1,158 @@
-# Welcome to your Lovable project
+# DevDesk Nexus Hub
 
-## Project info
+> **🚀 Now Deployment Ready!** Deploy instantly to Render or Vercel - see [DEPLOYMENT.md](./DEPLOYMENT.md) for instructions.
 
-**URL**: https://lovable.dev/projects/79e08fb6-2d8a-43bb-bdb4-52cc348a75ae
+A comprehensive development workspace that unifies design, development, and collaboration tools in one powerful platform. Built with React, TypeScript, and modern web technologies.
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+### 🎨 **Figma Integration**
+- Real-time design synchronization
+- Asset extraction and management
+- Comment system integration
+- Multi-format export (PNG, JPG, SVG, PDF)
 
-**Use Lovable**
+### 🛠 **Dev Mode**
+- Advanced development environment
+- Live preview and debugging
+- GitHub CI/CD integration
+- Real-time workflow monitoring
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/79e08fb6-2d8a-43bb-bdb4-52cc348a75ae) and start prompting.
+### 📁 **Document Management**
+- Secure file storage and sharing
+- Advanced permission controls
+- Real-time collaboration
+- Version history tracking
 
-Changes made via Lovable will be committed automatically to this repo.
+### 💬 **Communications**
+- Integrated team messaging
+- Video conferencing
+- Real-time notifications
+- Team collaboration tools
 
-**Use your preferred IDE**
+### 📊 **Analytics Dashboard**
+- Performance metrics and insights
+- Project analytics
+- Team productivity tracking
+- Custom reporting
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Quick Deploy
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Choose your preferred platform:
 
-Follow these steps:
+### Render
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Vercel
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/devdesk-nexus-hub)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🛠 Local Development
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Prerequisites
+- Node.js 18+ 
+- npm 9+
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/devdesk-nexus-hub.git
+cd devdesk-nexus-hub
+
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Build for Production
 
-**Use GitHub Codespaces**
+```bash
+# Build the application
+npm run build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Preview production build
+npm run preview
+```
 
-## What technologies are used for this project?
+## 🔧 Configuration
 
-This project is built with:
+### Environment Variables
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Create an `env.production` file or set environment variables in your deployment platform:
 
-## How can I deploy this project?
+```bash
+# Optional OAuth Configuration
+VITE_GITHUB_CLIENT_ID=your_github_client_id
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
 
-Simply open [Lovable](https://lovable.dev/projects/79e08fb6-2d8a-43bb-bdb4-52cc348a75ae) and click on Share -> Publish.
+# Optional Figma Integration
+VITE_FIGMA_ACCESS_TOKEN=your_figma_access_token
+VITE_FIGMA_FILE_KEY=your_figma_file_key
+VITE_FIGMA_TEAM_ID=your_figma_team_id
 
-## Can I connect a custom domain to my Lovable project?
+# API Configuration
+VITE_API_BASE_URL=/api/v1
+```
 
-Yes, you can!
+> **Note:** The application works perfectly without these credentials in demo mode.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🏗 Architecture
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **Tailwind CSS** for styling
+- **shadcn/ui** for component library
+- **Framer Motion** for animations
+- **TanStack Query** for data fetching
+
+### Features
+- **Responsive Design** - Works on all devices
+- **Mac Gesture Support** - Two-finger swipe navigation
+- **Professional UI/UX** - Modern, clean interface
+- **Performance Optimized** - Fast loading and smooth interactions
+- **Security Headers** - Production-ready security configuration
+
+## 📱 Responsive Design
+
+The application is fully responsive and works seamlessly across:
+- 🖥 **Desktop** - Full feature set with advanced interactions
+- 📱 **Tablet** - Touch-optimized interface
+- 📱 **Mobile** - Streamlined mobile experience
+
+## 🔐 Security
+
+- **OAuth 2.0** authentication (GitHub, Google)
+- **Security headers** configured for production
+- **HTTPS enforcement** in production environments
+- **Input validation** and sanitization
+- **XSS protection** enabled
+
+## 🤝 Development Mode
+
+When OAuth credentials are not configured, the application runs in development mode with:
+- ✅ Fully functional UI and interactions
+- ✅ Demo signin functionality
+- ✅ All features accessible
+- ✅ Professional appearance
+- ✅ No fake or misleading content
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🙋‍♂️ Support
+
+- 📖 [Deployment Guide](./DEPLOYMENT.md)
+- 🐛 [Report Issues](https://github.com/yourusername/devdesk-nexus-hub/issues)
+- 💬 [Discussions](https://github.com/yourusername/devdesk-nexus-hub/discussions)
+
+---
+
+**Ready to transform your development workflow?** Deploy now and start building better software faster! 🚀
