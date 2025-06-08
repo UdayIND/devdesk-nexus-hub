@@ -23,7 +23,7 @@ import useMeeting from '@/hooks/useMeeting';
 import { MeetingParticipant, ChatMessage } from '@/lib/meeting-api';
 
 interface VideoConferenceProps {
-  meetingId: string;
+  meetingId?: string;
   onLeave?: () => void;
 }
 
@@ -180,6 +180,32 @@ const VideoConference: React.FC<VideoConferenceProps> = ({ meetingId, onLeave })
       joinMeeting(meetingId);
     }
   }, [meetingId, isJoined, joinMeeting]);
+
+  // Show lobby/setup if no meetingId
+  if (!meetingId) {
+    return (
+      <div className="p-6 bg-gray-50 h-full flex flex-col">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+          <Video className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Video Conference</h2>
+          <p className="text-gray-600 mb-6">Start or join a video conference</p>
+          
+          <div className="space-y-4 max-w-md mx-auto">
+            <Button size="lg" className="w-full">
+              <Video className="w-5 h-5 mr-2" />
+              Start New Meeting
+            </Button>
+            <div className="flex items-center space-x-4">
+              <Input placeholder="Enter meeting ID" className="flex-1" />
+              <Button variant="outline">
+                Join Meeting
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Update live captions
   useEffect(() => {

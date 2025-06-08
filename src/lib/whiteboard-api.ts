@@ -167,7 +167,7 @@ export class WhiteboardAPI {
   private socket: Socket | null = null;
   private authToken: string | null = null;
 
-  constructor(baseURL: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') {
+  constructor(baseURL: string = import.meta.env.VITE_API_BASE_URL || 'https://devdesk-nexus-hub.onrender.com') {
     this.baseURL = baseURL;
     this.authToken = localStorage.getItem('auth_token');
   }

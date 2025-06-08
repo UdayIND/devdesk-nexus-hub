@@ -23,9 +23,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 interface SignInScreenProps {
   onSignIn: (credentials: { email: string; password: string }) => void;
   onBack: () => void;
+  onSwitchToSignUp: () => void;
 }
 
-const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack }) => {
+const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, onSwitchToSignUp }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -446,6 +447,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack }) => {
                   variant="link" 
                   className="text-blue-600 hover:text-blue-700 p-0 h-auto font-semibold"
                   type="button"
+                  onClick={onSwitchToSignUp}
                 >
                   Create Account
                 </Button>

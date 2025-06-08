@@ -1,67 +1,96 @@
-
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import LandingPage from '@/components/LandingPage';
 import SignInScreen from '@/components/SignInScreen';
+import SignUpScreen from '@/components/SignUpScreen';
 import Dashboard from '@/components/Dashboard';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
-type AppState = 'landing' | 'signin' | 'dashboard';
-
-interface User {
-  email: string;
-  name?: string;
-}
+type AppState = 'landing' | 'signin' | 'signup' | 'dashboard';
 
 const Index = () => {
   const [appState, setAppState] = useState<AppState>('landing');
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    user, 
+    isAuthenticated, 
+    isLoading, 
+    error, 
+    signIn, 
+    signUp, 
+    signOut, 
+    clearError 
+  } = useAuth();
 
+  // Update app state based on authentication status
   useEffect(() => {
-    // Check if user is already logged in (simulate checking localStorage or session)
-    const checkAuthStatus = async () => {
-      setIsLoading(true);
-      
-      // Simulate auth check delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const savedUser = localStorage.getItem('developmentDesk_user');
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        setAppState('dashboard');
-      }
-      
-      setIsLoading(false);
-    };
+    if (isAuthenticated && user) {
+      setAppState('dashboard');
+    } else if (!isLoading) {
+      setAppState('landing');
+    }
+  }, [isAuthenticated, user, isLoading]);
 
-    checkAuthStatus();
-  }, []);
+  // Show error messages
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      clearError();
+    }
+  }, [error, clearError]);
 
   const handleGetStarted = () => {
     setAppState('signin');
   };
 
-  const handleSignIn = (credentials: { email: string; password: string }) => {
-    // Simulate authentication
-    const userData: User = {
-      email: credentials.email,
-      name: credentials.email.split('@')[0]
-    };
-    
-    setUser(userData);
-    localStorage.setItem('developmentDesk_user', JSON.stringify(userData));
-    setAppState('dashboard');
+  const handleSignIn = async (credentials: { email: string; password: string }) => {
+    try {
+      await signIn(credentials);
+      toast.success('Welcome back!');
+    } catch (err) {
+      // Error is handled by the useAuth hook and displayed via toast
+      console.error('Sign in failed:', err);
+    }
   };
 
-  const handleSignOut = () => {
-    setUser(null);
-    localStorage.removeItem('developmentDesk_user');
-    setAppState('landing');
+  const handleSignUp = async (userData: { 
+    email: string; 
+    password: string; 
+    name: string; 
+    company?: string; 
+    phone?: string; 
+  }) => {
+    try {
+      await signUp(userData);
+      toast.success('Account created successfully! Welcome to DevDesk Nexus Hub!');
+    } catch (err) {
+      // Error is handled by the useAuth hook and displayed via toast
+      console.error('Sign up failed:', err);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setAppState('landing');
+      toast.success('Signed out successfully');
+    } catch (err) {
+      console.error('Sign out failed:', err);
+      // Force state reset even if sign out fails
+      setAppState('landing');
+    }
   };
 
   const handleBack = () => {
     setAppState('landing');
+  };
+
+  const handleSwitchToSignUp = () => {
+    setAppState('signup');
+  };
+
+  const handleSwitchToSignIn = () => {
+    setAppState('signin');
   };
 
   if (isLoading) {
@@ -82,7 +111,18 @@ const Index = () => {
           <LandingPage onGetStarted={handleGetStarted} />
         )}
         {appState === 'signin' && (
-          <SignInScreen onSignIn={handleSignIn} onBack={handleBack} />
+          <SignInScreen 
+            onSignIn={handleSignIn} 
+            onBack={handleBack} 
+            onSwitchToSignUp={handleSwitchToSignUp}
+          />
+        )}
+        {appState === 'signup' && (
+          <SignUpScreen 
+            onSignUp={handleSignUp} 
+            onBack={handleBack} 
+            onSwitchToSignIn={handleSwitchToSignIn}
+          />
         )}
         {appState === 'dashboard' && user && (
           <Dashboard user={user} onSignOut={handleSignOut} />

@@ -19,4 +19,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    // Production environment variables
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
+      'https://devdesk-nexus-hub.onrender.com'
+    ),
+  },
 }));

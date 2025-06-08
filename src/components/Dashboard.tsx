@@ -20,7 +20,17 @@ import {
   Plus,
   ChevronDown,
   Server,
-  Rocket
+  Rocket,
+  Monitor,
+  Shield,
+  FolderOpen,
+  Building,
+  Camera,
+  Workflow,
+  GitBranch as Git,
+  Clock,
+  Archive,
+  HardDrive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +47,17 @@ import Communications from './dashboard/Communications';
 import ProjectManagement from './dashboard/ProjectManagement';
 import Deployment from './dashboard/Deployment';
 import NotificationCenter from './dashboard/NotificationCenter';
+import MeetingScheduler from './dashboard/MeetingScheduler';
+import VideoConference from './dashboard/VideoConference';
+import FileManager from './dashboard/FileManager';
+import SecuritySettings from './dashboard/SecuritySettings';
+import OrganizationOverview from './dashboard/OrganizationOverview';
+import BuildHistory from './dashboard/BuildHistory';
+import PipelineConfiguration from './dashboard/PipelineConfiguration';
+import WorkflowManager from './dashboard/WorkflowManager';
+import RepositorySelector from './dashboard/RepositorySelector';
+import GitHubAuth from './dashboard/GitHubAuth';
+import BoardManager from './dashboard/BoardManager';
 
 interface DashboardProps {
   user: { email: string; name?: string };
@@ -49,13 +70,38 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [notificationOpen, setNotificationOpen] = useState(false);
 
   const tabs = [
+    // Core Features
     { id: 'analytics', name: 'Analytics', icon: BarChart3, component: Analytics },
     { id: 'team', name: 'Team Management', icon: Users, component: TeamManagement },
-    { id: 'communications', name: 'Communications', icon: MessageSquare, component: Communications },
     { id: 'projects', name: 'Project Management', icon: Calendar, component: ProjectManagement },
-    { id: 'deployment', name: 'Deployment', icon: Rocket, component: Deployment },
-    { id: 'deck', name: 'Deck (Meetings)', icon: Video, component: Deck },
+    { id: 'communications', name: 'Communications', icon: MessageSquare, component: Communications },
+    
+    // Meeting & Collaboration
+    { id: 'meetings', name: 'Meeting Scheduler', icon: Clock, component: MeetingScheduler },
+    { id: 'video', name: 'Video Conference', icon: Video, component: VideoConference },
+    { id: 'deck', name: 'Deck (Presentations)', icon: Presentation, component: Deck },
+    { id: 'boards', name: 'Board Manager', icon: Archive, component: BoardManager },
+    
+    // File Management
     { id: 'documents', name: 'Documents', icon: FileText, component: Documents },
+    { id: 'filemanager', name: 'File Manager', icon: FolderOpen, component: FileManager },
+    
+    // Development & Deployment
+    { id: 'deployment', name: 'Deployment', icon: Rocket, component: Deployment },
+    { id: 'devmode', name: 'Dev Mode', icon: Monitor, component: DevMode },
+    { id: 'workflows', name: 'Workflow Manager', icon: Workflow, component: WorkflowManager },
+    { id: 'pipelines', name: 'Pipeline Config', icon: Git, component: PipelineConfiguration },
+    { id: 'builds', name: 'Build History', icon: Server, component: BuildHistory },
+    { id: 'repos', name: 'Repository Selector', icon: GitBranch, component: RepositorySelector },
+    { id: 'github', name: 'GitHub Integration', icon: GitBranch, component: GitHubAuth },
+    
+    // Design & Integration
+    { id: 'figma', name: 'Figma Integration', icon: Palette, component: FigmaIntegration },
+    { id: 'design', name: 'Design Desk', icon: Camera, component: DesignDesk },
+    
+    // Organization & Security
+    { id: 'organization', name: 'Organization', icon: Building, component: OrganizationOverview },
+    { id: 'security', name: 'Security Settings', icon: Shield, component: SecuritySettings },
   ];
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || Analytics;

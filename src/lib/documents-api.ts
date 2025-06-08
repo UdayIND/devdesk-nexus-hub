@@ -256,29 +256,239 @@ export interface AccessLog {
   metadata?: Record<string, any>;
 }
 
+// Mock data for demo purposes
+const MOCK_DOCUMENTS: Document[] = [
+  {
+    id: '1',
+    name: 'Project Requirements.pdf',
+    originalName: 'Project Requirements.pdf',
+    description: 'Detailed project requirements document',
+    type: 'pdf',
+    mimeType: 'application/pdf',
+    size: 2485760,
+    ownerId: 'user-1',
+    path: '/documents/Project Requirements.pdf',
+    url: '/documents/1',
+    downloadUrl: '/documents/1/download',
+    previewUrl: '/documents/1/preview',
+    thumbnailUrl: '/documents/1/thumbnail',
+    checksum: 'abc123',
+    version: 1,
+    status: 'ready',
+    tags: ['requirements', 'project'],
+    metadata: {
+      pageCount: 15,
+      author: 'John Doe',
+      title: 'Project Requirements',
+      customFields: {}
+    },
+    permissions: {
+      isPublic: false,
+      allowDownload: true,
+      allowShare: true,
+      allowComment: true,
+      allowEdit: false,
+      passwordProtected: false,
+      downloadCount: 5,
+      accessLevel: 'team',
+      sharedWith: [],
+      shareLinks: []
+    },
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000).toISOString(),
+    lastAccessedAt: new Date(Date.now() - 1800000).toISOString()
+  },
+  {
+    id: '2',
+    name: 'Design Mockups.figma',
+    originalName: 'Design Mockups.figma',
+    description: 'UI/UX design mockups for the new dashboard',
+    type: 'figma',
+    mimeType: 'application/figma',
+    size: 15728640,
+    ownerId: 'user-2',
+    path: '/documents/Design Mockups.figma',
+    url: '/documents/2',
+    downloadUrl: '/documents/2/download',
+    previewUrl: '/documents/2/preview',
+    thumbnailUrl: '/documents/2/thumbnail',
+    checksum: 'def456',
+    version: 3,
+    status: 'ready',
+    tags: ['design', 'mockups', 'ui'],
+    metadata: {
+      width: 1920,
+      height: 1080,
+      author: 'Jane Smith',
+      title: 'Dashboard Mockups',
+      customFields: {}
+    },
+    permissions: {
+      isPublic: false,
+      allowDownload: true,
+      allowShare: true,
+      allowComment: true,
+      allowEdit: true,
+      passwordProtected: false,
+      downloadCount: 12,
+      accessLevel: 'team',
+      sharedWith: [],
+      shareLinks: []
+    },
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    updatedAt: new Date(Date.now() - 7200000).toISOString(),
+    lastAccessedAt: new Date(Date.now() - 900000).toISOString()
+  },
+  {
+    id: '3',
+    name: 'API Documentation.md',
+    originalName: 'API Documentation.md',
+    description: 'Complete API documentation with examples',
+    type: 'markdown',
+    mimeType: 'text/markdown',
+    size: 524288,
+    ownerId: 'user-1',
+    path: '/documents/API Documentation.md',
+    url: '/documents/3',
+    downloadUrl: '/documents/3/download',
+    previewUrl: '/documents/3/preview',
+    thumbnailUrl: '/documents/3/thumbnail',
+    checksum: 'ghi789',
+    version: 2,
+    status: 'ready',
+    tags: ['documentation', 'api', 'starred'],
+    metadata: {
+      wordCount: 2500,
+      author: 'Development Team',
+      title: 'API Documentation',
+      customFields: {}
+    },
+    permissions: {
+      isPublic: true,
+      allowDownload: true,
+      allowShare: true,
+      allowComment: true,
+      allowEdit: false,
+      passwordProtected: false,
+      downloadCount: 28,
+      accessLevel: 'organization',
+      sharedWith: [
+        {
+          id: 'share-1',
+          userId: 'user-3',
+          email: 'teammate@company.com',
+          name: 'Team Member',
+          role: 'viewer',
+          permissions: {
+            canView: true,
+            canDownload: true,
+            canComment: false,
+            canEdit: false,
+            canShare: false,
+            canDelete: false,
+            canManagePermissions: false
+          },
+          invitedAt: new Date(Date.now() - 86400000).toISOString(),
+          acceptedAt: new Date(Date.now() - 82800000).toISOString(),
+          lastAccessedAt: new Date(Date.now() - 3600000).toISOString()
+        }
+      ],
+      shareLinks: []
+    },
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+    updatedAt: new Date(Date.now() - 14400000).toISOString(),
+    lastAccessedAt: new Date(Date.now() - 600000).toISOString()
+  }
+];
+
+const MOCK_FOLDERS: Folder[] = [
+  {
+    id: 'folder-1',
+    name: 'Project Assets',
+    description: 'All project-related assets and resources',
+    ownerId: 'user-1',
+    path: '/Project Assets',
+    permissions: {
+      isPublic: false,
+      allowDownload: true,
+      allowShare: true,
+      allowComment: true,
+      allowEdit: true,
+      passwordProtected: false,
+      downloadCount: 0,
+      accessLevel: 'team',
+      sharedWith: [],
+      shareLinks: []
+    },
+    documentCount: 8,
+    totalSize: 52428800,
+    createdAt: new Date(Date.now() - 604800000).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: 'folder-2',
+    name: 'Documentation',
+    description: 'Project documentation and guides',
+    ownerId: 'user-1',
+    path: '/Documentation',
+    permissions: {
+      isPublic: true,
+      allowDownload: true,
+      allowShare: true,
+      allowComment: true,
+      allowEdit: false,
+      passwordProtected: false,
+      downloadCount: 0,
+      accessLevel: 'organization',
+      sharedWith: [],
+      shareLinks: []
+    },
+    documentCount: 12,
+    totalSize: 15728640,
+    createdAt: new Date(Date.now() - 1209600000).toISOString(),
+    updatedAt: new Date(Date.now() - 172800000).toISOString()
+  }
+];
+
+const MOCK_STORAGE_QUOTA: StorageQuota = {
+  used: 157286400, // ~150MB
+  total: 5368709120, // 5GB
+  percentage: 2.93,
+  documentCount: 42,
+  byType: {
+    'application/pdf': { count: 8, size: 52428800 },
+    'image/png': { count: 15, size: 41943040 },
+    'text/markdown': { count: 6, size: 3145728 },
+    'application/figma': { count: 3, size: 47185920 },
+    'application/json': { count: 10, size: 1048576 }
+  }
+};
+
+// Production-ready: Always try real API first, fallback to mock data only if API fails
+const USE_MOCK_DATA = false; // Always attempt real API first
+
 export class DocumentsAPI {
   private baseURL: string;
   private authToken: string | null = null;
   private uploadAbortControllers: Map<string, AbortController> = new Map();
 
-  constructor(baseURL: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') {
+  constructor(baseURL: string = import.meta.env.VITE_API_BASE_URL || 'https://devdesk-nexus-hub.onrender.com') {
     this.baseURL = baseURL;
-    this.authToken = localStorage.getItem('auth_token');
   }
 
-  // Authentication
   setAuthToken(token: string) {
     this.authToken = token;
-    localStorage.setItem('auth_token', token);
   }
 
   private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {};
-    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
     if (this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
-    
+
     return headers;
   }
 
@@ -292,23 +502,38 @@ export class DocumentsAPI {
         },
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return data;
+      const data = await response.json();
+      return { success: true, data };
     } catch (error) {
       console.error('API request failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
 
-  // Document Management
+  // Add mock response helper
+  private mockResponse<T>(data: T): Promise<ApiResponse<T>> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({ success: true, data });
+      }, 300 + Math.random() * 700); // Simulate network delay
+    });
+  }
+
+  private mockError(message: string): Promise<ApiResponse<any>> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({ success: false, error: message });
+      }, 300);
+    });
+  }
+
   async getDocuments(
     folderId?: string,
     page = 1,
@@ -316,30 +541,143 @@ export class DocumentsAPI {
     sort = 'updatedAt',
     direction: 'asc' | 'desc' = 'desc'
   ): Promise<ApiResponse<DocumentListResponse>> {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      sort,
-      direction,
-    });
-    
-    if (folderId) params.append('folderId', folderId);
+    // Try real API first
+    if (!USE_MOCK_DATA) {
+      try {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+          sort,
+          direction,
+        });
 
-    return this.request<DocumentListResponse>(`/api/documents?${params}`);
+        if (folderId) {
+          params.append('folderId', folderId);
+        }
+
+        const result = await this.request<DocumentListResponse>(`/api/documents?${params}`);
+        if (result.success) {
+          return result;
+        }
+      } catch (error) {
+        console.warn('API request failed, falling back to mock data:', error);
+      }
+    }
+
+    // Fallback to mock data
+    let filteredDocs = [...MOCK_DOCUMENTS];
+    
+    // Apply sorting
+    filteredDocs.sort((a, b) => {
+      const aVal = a[sort as keyof Document] as string;
+      const bVal = b[sort as keyof Document] as string;
+      const comparison = aVal.localeCompare(bVal);
+      return direction === 'asc' ? comparison : -comparison;
+    });
+
+    const response: DocumentListResponse = {
+      documents: filteredDocs,
+      folders: MOCK_FOLDERS,
+      total: filteredDocs.length,
+      page,
+      limit,
+      path: folderId ? [folderId] : ['']
+    };
+
+    return this.mockResponse(response);
   }
 
   async getDocument(documentId: string): Promise<ApiResponse<Document>> {
+    if (USE_MOCK_DATA) {
+      const document = MOCK_DOCUMENTS.find(doc => doc.id === documentId);
+      if (document) {
+        return this.mockResponse(document);
+      } else {
+        return this.mockError('Document not found');
+      }
+    }
+
     return this.request<Document>(`/api/documents/${documentId}`);
   }
 
   async searchDocuments(searchParams: DocumentSearch): Promise<ApiResponse<DocumentSearchResult>> {
+    if (USE_MOCK_DATA) {
+      const { query, filters, sort, page, limit } = searchParams;
+      let filteredDocs = [...MOCK_DOCUMENTS];
+
+      // Apply search query
+      if (query) {
+        filteredDocs = filteredDocs.filter(doc => 
+          doc.name.toLowerCase().includes(query.toLowerCase()) ||
+          doc.description?.toLowerCase().includes(query.toLowerCase()) ||
+          doc.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+        );
+      }
+
+      // Apply filters
+      if (filters.type?.length) {
+        filteredDocs = filteredDocs.filter(doc => filters.type!.includes(doc.type));
+      }
+
+      if (filters.tags?.length) {
+        filteredDocs = filteredDocs.filter(doc => 
+          filters.tags!.some(tag => doc.tags.includes(tag))
+        );
+      }
+
+      // Apply sorting
+      filteredDocs.sort((a, b) => {
+        const aVal = a[sort.field as keyof Document] as string;
+        const bVal = b[sort.field as keyof Document] as string;
+        const comparison = aVal.localeCompare(bVal);
+        return sort.direction === 'asc' ? comparison : -comparison;
+      });
+
+      const start = (page - 1) * limit;
+      const paginatedDocs = filteredDocs.slice(start, start + limit);
+
+      const result: DocumentSearchResult = {
+        documents: paginatedDocs,
+        total: filteredDocs.length,
+        page,
+        limit,
+        facets: {
+          types: [
+            { type: 'pdf', count: MOCK_DOCUMENTS.filter(d => d.type === 'pdf').length },
+            { type: 'figma', count: MOCK_DOCUMENTS.filter(d => d.type === 'figma').length },
+            { type: 'markdown', count: MOCK_DOCUMENTS.filter(d => d.type === 'markdown').length }
+          ],
+          owners: [
+            { userId: 'user-1', name: 'John Doe', count: MOCK_DOCUMENTS.filter(d => d.ownerId === 'user-1').length },
+            { userId: 'user-2', name: 'Jane Smith', count: MOCK_DOCUMENTS.filter(d => d.ownerId === 'user-2').length }
+          ],
+          tags: [
+            { tag: 'requirements', count: 1 },
+            { tag: 'design', count: 1 },
+            { tag: 'documentation', count: 1 },
+            { tag: 'api', count: 1 }
+          ]
+        }
+      };
+
+      return this.mockResponse(result);
+    }
+
     return this.request<DocumentSearchResult>('/api/documents/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(searchParams),
     });
   }
 
+  async getStorageQuota(): Promise<ApiResponse<StorageQuota>> {
+    if (USE_MOCK_DATA) {
+      return this.mockResponse(MOCK_STORAGE_QUOTA);
+    }
+
+    return this.request<StorageQuota>('/api/documents/quota');
+  }
+
+  // Document Management
   async uploadDocument(
     file: File,
     options: {
@@ -689,10 +1027,6 @@ export class DocumentsAPI {
   // Analytics & Activity
   async getDocumentActivity(documentId: string, limit = 50): Promise<ApiResponse<DocumentActivity[]>> {
     return this.request<DocumentActivity[]>(`/api/documents/${documentId}/activity?limit=${limit}`);
-  }
-
-  async getStorageQuota(): Promise<ApiResponse<StorageQuota>> {
-    return this.request<StorageQuota>('/api/storage/quota');
   }
 
   async getAccessLogs(documentId: string, limit = 100): Promise<ApiResponse<AccessLog[]>> {

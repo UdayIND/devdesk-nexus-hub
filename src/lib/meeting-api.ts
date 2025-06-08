@@ -219,13 +219,125 @@ export interface SocketEvents {
   'error': (error: { message: string; code?: string }) => void;
 }
 
+export interface Participant {
+  id: string;
+  userId?: string;
+  name: string;
+  email?: string;
+  avatar?: string;
+  role: 'host' | 'co-host' | 'presenter' | 'attendee';
+  status: 'invited' | 'joined' | 'left' | 'disconnected';
+  joinedAt?: string;
+  leftAt?: string;
+  permissions: ParticipantPermissions;
+  deviceInfo: DeviceInfo;
+}
+
+export interface ParticipantPermissions {
+  canSpeak: boolean;
+  canVideo: boolean;
+  canScreenShare: boolean;
+  canChat: boolean;
+  canInvite: boolean;
+  canRecord: boolean;
+  canMute: boolean;
+}
+
+export interface DeviceInfo {
+  camera: boolean;
+  microphone: boolean;
+  speaker: boolean;
+  screenShare: boolean;
+  browser: string;
+  os: string;
+  connection: 'excellent' | 'good' | 'fair' | 'poor';
+}
+
+export interface Recording {
+  id: string;
+  meetingId: string;
+  url: string;
+  size: number;
+  duration: number;
+  startTime: string;
+  endTime: string;
+  status: 'recording' | 'processing' | 'ready' | 'failed';
+  downloadUrl?: string;
+}
+
+// Mock Data
+const MOCK_MEETINGS: Meeting[] = [
+  {
+    id: 'meeting-1',
+    title: 'Daily Standup',
+    description: 'Team daily standup meeting',
+    type: 'video',
+    status: 'scheduled',
+    hostId: 'user-1',
+    startTime: new Date(Date.now() - 300000).toISOString(),
+    endTime: new Date(Date.now() + 3600000).toISOString(),
+    timezone: 'America/New_York',
+    waitingRoom: false,
+    maxParticipants: 10,
+    settings: {
+      allowChat: true,
+      allowScreenShare: true,
+      allowRecording: true,
+      muteOnJoin: false,
+      videoOnJoin: true,
+      requirePassword: false,
+      enableWaitingRoom: false,
+      enableBreakoutRooms: false,
+      enableLiveCaptions: false,
+      enableTranscription: false,
+      autoAdmit: 'everyone',
+      recordingMode: 'cloud'
+    },
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 300000).toISOString()
+  },
+  {
+    id: 'meeting-2',
+    title: 'Client Presentation',
+    description: 'Quarterly review with client stakeholders',
+    type: 'video',
+    status: 'scheduled',
+    hostId: 'user-1',
+    startTime: new Date(Date.now() + 7200000).toISOString(),
+    endTime: new Date(Date.now() + 10800000).toISOString(),
+    timezone: 'America/New_York',
+    waitingRoom: true,
+    maxParticipants: 8,
+    settings: {
+      allowChat: true,
+      allowScreenShare: true,
+      allowRecording: true,
+      muteOnJoin: true,
+      videoOnJoin: false,
+      requirePassword: true,
+      password: 'client123',
+      enableWaitingRoom: true,
+      enableBreakoutRooms: false,
+      enableLiveCaptions: false,
+      enableTranscription: false,
+      autoAdmit: 'everyone',
+      recordingMode: 'cloud'
+    },
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    updatedAt: new Date(Date.now() - 172800000).toISOString()
+  }
+];
+
+// Mock flag
+const USE_MOCK_DATA = false; // Production-ready: Always attempt real API first
+
 export class MeetingAPI {
   private baseURL: string;
   private socket: Socket | null = null;
   private authToken: string | null = null;
   private currentMeeting: Meeting | null = null;
 
-  constructor(baseURL: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') {
+  constructor(baseURL: string = import.meta.env.VITE_API_BASE_URL || 'https://devdesk-nexus-hub.onrender.com') {
     this.baseURL = baseURL;
     this.authToken = localStorage.getItem('auth_token');
   }
@@ -291,10 +403,33 @@ export class MeetingAPI {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
 
+    if (USE_MOCK_DATA) {
+      const mockMeetings = await this.mockResponse<Meeting[]>(MOCK_MEETINGS);
+      const total = mockMeetings.length;
+      const pageMeetings = mockMeetings.slice((page - 1) * limit, page * limit);
+      return this.mockResponse<MeetingListResponse>({
+        meetings: pageMeetings,
+        total,
+        page,
+        limit
+      });
+    }
+
     return this.request<MeetingListResponse>(`/api/meetings?${params}`);
   }
 
   async getMeeting(meetingId: string): Promise<ApiResponse<Meeting>> {
+    if (USE_MOCK_DATA) {
+      const meeting = MOCK_MEETINGS.find(m => m.id === meetingId);
+      if (!meeting) {
+        throw new Error('Meeting not found');
+      }
+      return this.mockResponse<ApiResponse<Meeting>>({
+        success: true,
+        data: meeting
+      });
+    }
+
     return this.request<Meeting>(`/api/meetings/${meetingId}`);
   }
 
@@ -308,6 +443,44 @@ export class MeetingAPI {
     settings: Partial<MeetingSettings>;
     invites?: { email: string; role: 'presenter' | 'attendee' }[];
   }): Promise<ApiResponse<Meeting>> {
+    if (USE_MOCK_DATA) {
+      const newMeeting: Meeting = {
+        id: `meeting-${Date.now()}`,
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        status: 'scheduled',
+        hostId: 'user-1',
+        startTime: data.startTime,
+        endTime: data.endTime,
+        timezone: data.timezone,
+        waitingRoom: data.settings?.enableWaitingRoom || false,
+        maxParticipants: data.settings?.maxParticipants || 10,
+        settings: {
+          allowChat: data.settings?.allowChat || true,
+          allowScreenShare: data.settings?.allowScreenShare || true,
+          allowRecording: data.settings?.allowRecording || true,
+          muteOnJoin: data.settings?.muteOnJoin || false,
+          videoOnJoin: data.settings?.videoOnJoin || true,
+          requirePassword: data.settings?.requirePassword || false,
+          enableWaitingRoom: data.settings?.enableWaitingRoom || false,
+          enableBreakoutRooms: data.settings?.enableBreakoutRooms || false,
+          enableLiveCaptions: data.settings?.enableLiveCaptions || false,
+          enableTranscription: data.settings?.enableTranscription || false,
+          autoAdmit: data.settings?.autoAdmit || 'everyone',
+          recordingMode: data.settings?.recordingMode || 'cloud'
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      MOCK_MEETINGS.push(newMeeting);
+      return this.mockResponse<ApiResponse<Meeting>>({
+        success: true,
+        data: newMeeting
+      });
+    }
+
     return this.request<Meeting>('/api/meetings', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -315,6 +488,25 @@ export class MeetingAPI {
   }
 
   async updateMeeting(meetingId: string, data: Partial<Meeting>): Promise<ApiResponse<Meeting>> {
+    if (USE_MOCK_DATA) {
+      const meetingIndex = MOCK_MEETINGS.findIndex(m => m.id === meetingId);
+      if (meetingIndex === -1) {
+        throw new Error('Meeting not found');
+      }
+
+      const updatedMeeting = {
+        ...MOCK_MEETINGS[meetingIndex],
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+
+      MOCK_MEETINGS[meetingIndex] = updatedMeeting;
+      return this.mockResponse<ApiResponse<Meeting>>({
+        success: true,
+        data: updatedMeeting
+      });
+    }
+
     return this.request<Meeting>(`/api/meetings/${meetingId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -322,6 +514,19 @@ export class MeetingAPI {
   }
 
   async deleteMeeting(meetingId: string): Promise<ApiResponse<void>> {
+    if (USE_MOCK_DATA) {
+      const meetingIndex = MOCK_MEETINGS.findIndex(m => m.id === meetingId);
+      if (meetingIndex === -1) {
+        throw new Error('Meeting not found');
+      }
+
+      MOCK_MEETINGS.splice(meetingIndex, 1);
+      return this.mockResponse<ApiResponse<void>>({
+        success: true,
+        data: undefined
+      });
+    }
+
     return this.request<void>(`/api/meetings/${meetingId}`, {
       method: 'DELETE',
     });
@@ -341,6 +546,52 @@ export class MeetingAPI {
 
   // Participant Management
   async joinMeeting(meetingId: string, password?: string): Promise<ApiResponse<{ meeting: Meeting; participant: MeetingParticipant }>> {
+    if (USE_MOCK_DATA) {
+      const meeting = MOCK_MEETINGS.find(m => m.id === meetingId);
+      if (!meeting) {
+        throw new Error('Meeting not found');
+      }
+
+      const participant: MeetingParticipant = {
+        id: `p-${Date.now()}`,
+        userId: 'user-1',
+        meetingId,
+        role: 'attendee',
+        status: 'joined',
+        joinedAt: new Date().toISOString(),
+        mediaState: {
+          video: true,
+          audio: true,
+          screenShare: false
+        },
+        permissions: {
+          canMute: false,
+          canUnmute: false,
+          canShare: false,
+          canRecord: false,
+          canManageParticipants: false
+        },
+        user: {
+          id: 'user-1',
+          name: 'John Doe',
+          email: 'john@company.com',
+          avatar: 'https://example.com/john-doe.jpg'
+        }
+      };
+
+      meeting.participants.push(participant);
+      meeting.status = 'live';
+      meeting.startTime = new Date().toISOString();
+
+      return this.mockResponse<ApiResponse<{ meeting: Meeting; participant: MeetingParticipant }>>({
+        success: true,
+        data: {
+          meeting,
+          participant
+        }
+      });
+    }
+
     return this.request<{ meeting: Meeting; participant: MeetingParticipant }>(`/api/meetings/${meetingId}/join`, {
       method: 'POST',
       body: JSON.stringify({ password }),
@@ -348,6 +599,21 @@ export class MeetingAPI {
   }
 
   async leaveMeeting(meetingId: string): Promise<ApiResponse<void>> {
+    if (USE_MOCK_DATA) {
+      const meeting = MOCK_MEETINGS.find(m => m.id === meetingId);
+      if (!meeting) {
+        throw new Error('Meeting not found');
+      }
+
+      meeting.status = 'ended';
+      meeting.endTime = new Date().toISOString();
+
+      return this.mockResponse<ApiResponse<void>>({
+        success: true,
+        data: undefined
+      });
+    }
+
     return this.request<void>(`/api/meetings/${meetingId}/leave`, {
       method: 'POST',
     });
@@ -421,14 +687,50 @@ export class MeetingAPI {
   }
 
   // Recording
-  async startRecording(meetingId: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/api/meetings/${meetingId}/recording/start`, {
+  async startRecording(meetingId: string): Promise<ApiResponse<Recording>> {
+    if (USE_MOCK_DATA) {
+      const recording: Recording = {
+        id: `rec-${Date.now()}`,
+        meetingId,
+        url: `https://recordings.example.com/${meetingId}`,
+        size: 0,
+        duration: 0,
+        startTime: new Date().toISOString(),
+        endTime: '',
+        status: 'recording'
+      };
+
+      return this.mockResponse<ApiResponse<Recording>>({
+        success: true,
+        data: recording
+      });
+    }
+
+    return this.request<Recording>(`/api/meetings/${meetingId}/recording/start`, {
       method: 'POST',
     });
   }
 
-  async stopRecording(meetingId: string): Promise<ApiResponse<{ recordingUrl: string }>> {
-    return this.request<{ recordingUrl: string }>(`/api/meetings/${meetingId}/recording/stop`, {
+  async stopRecording(meetingId: string): Promise<ApiResponse<Recording>> {
+    if (USE_MOCK_DATA) {
+      const recording: Recording = {
+        id: `rec-${Date.now()}`,
+        meetingId,
+        url: `https://recordings.example.com/${meetingId}`,
+        size: 104857600, // 100MB
+        duration: 1800, // 30 minutes
+        startTime: new Date(Date.now() - 1800000).toISOString(),
+        endTime: new Date().toISOString(),
+        status: 'processing'
+      };
+
+      return this.mockResponse<ApiResponse<Recording>>({
+        success: true,
+        data: recording
+      });
+    }
+
+    return this.request<Recording>(`/api/meetings/${meetingId}/recording/stop`, {
       method: 'POST',
     });
   }
@@ -705,6 +1007,14 @@ export class MeetingAPI {
       .trim()
       .substring(0, 1000); // Limit length
   }
+
+  private mockResponse<T>(data: T): Promise<T> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(data);
+      }, 300 + Math.random() * 700);
+    });
+  }
 }
 
-export default MeetingAPI; 
+export default new MeetingAPI(); 
