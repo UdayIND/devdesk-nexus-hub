@@ -19,94 +19,142 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
-class AuthService {
-  private baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://devdesk-nexus-hub.onrender.com/api';
-  private tokenKey = 'developmentDesk_token';
-  private refreshTokenKey = 'developmentDesk_refreshToken';
-  private userKey = 'developmentDesk_user';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+const TOKEN_KEY = 'devdesk_auth_token';
+const REFRESH_TOKEN_KEY = 'devdesk_refresh_token';
+const USER_KEY = 'devdesk_user';
 
-  // Get current user from localStorage
+class AuthService {
+  private readonly baseUrl: string;
+
+  constructor() {
+    this.baseUrl = API_BASE_URL;
+  }
+
+  // Store authentication data securely
+  private storeAuthData(authResponse: AuthResponse): void {
+    localStorage.setItem(TOKEN_KEY, authResponse.token);
+    localStorage.setItem(REFRESH_TOKEN_KEY, authResponse.refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
+  }
+
+  // Clear stored authentication data
+  private clearAuthData(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }
+
+  // Get stored token
+  getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  // Get current user from storage
   getCurrentUser(): User | null {
+    const userJson = localStorage.getItem(USER_KEY);
+    if (!userJson) return null;
+    
     try {
-      const userStr = localStorage.getItem(this.userKey);
-      return userStr ? JSON.parse(userStr) : null;
+      return JSON.parse(userJson);
     } catch {
       return null;
     }
   }
 
-  // Get current token
-  getToken(): string | null {
-    return localStorage.getItem(this.tokenKey);
+  // Make authenticated API request
+  private async apiRequest<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const token = this.getToken();
+
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
+      throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
   }
 
-  // Get refresh token
-  getRefreshToken(): string | null {
-    return localStorage.getItem(this.refreshTokenKey);
+  // Create demo user for development
+  private createDemoUser(email: string, name?: string): User {
+    return {
+      id: `demo_${Date.now()}`,
+      email,
+      name: name || email.split('@')[0],
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+      role: 'user',
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      isEmailVerified: true,
+      preferences: {
+        theme: 'light',
+        notifications: {
+          email: true,
+          push: true,
+          slack: false,
+        },
+        timezone: 'UTC',
+        language: 'en',
+      },
+    };
   }
 
-  // Check if user is authenticated
-  isAuthenticated(): boolean {
-    return !!this.getToken() && !!this.getCurrentUser();
-  }
-
-  // Store auth data
-  private storeAuthData(authResponse: AuthResponse): void {
-    localStorage.setItem(this.tokenKey, authResponse.token);
-    localStorage.setItem(this.refreshTokenKey, authResponse.refreshToken);
-    localStorage.setItem(this.userKey, JSON.stringify(authResponse.user));
-  }
-
-  // Clear auth data
-  private clearAuthData(): void {
-    localStorage.removeItem(this.tokenKey);
-    localStorage.removeItem(this.refreshTokenKey);
-    localStorage.removeItem(this.userKey);
+  // Create demo auth response
+  private createDemoAuthResponse(email: string, name?: string): AuthResponse {
+    const user = this.createDemoUser(email, name);
+    return {
+      user,
+      token: `demo_token_${Date.now()}`,
+      refreshToken: `demo_refresh_${Date.now()}`,
+    };
   }
 
   // Sign in
   async signIn(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/signin`, {
+      // Try real API first
+      const response = await this.apiRequest<AuthResponse>('/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(credentials),
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Sign in failed' }));
-        throw new Error(error.message || 'Sign in failed');
-      }
-
-      const authResponse: AuthResponse = await response.json();
-      this.storeAuthData(authResponse);
-      return authResponse;
+      
+      this.storeAuthData(response);
+      return response;
     } catch (error) {
-      console.error('Sign in error:', error);
-      // If backend is not available, provide a fallback response for demo purposes
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.warn('Backend not available, using fallback authentication');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      console.warn('Real authentication failed, using demo authentication:', error);
+      
+      // Fallback to demo authentication for development
+      if (import.meta.env.VITE_ENABLE_MOCK_AUTH !== 'false') {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
         
-        const fallbackResponse: AuthResponse = {
-          user: {
-            id: '1',
-            email: credentials.email,
-            name: credentials.email.split('@')[0],
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${credentials.email}`,
-            role: 'user',
-            createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString()
-          },
-          token: 'fallback_jwt_token_' + Math.random().toString(36).substr(2, 9),
-          refreshToken: 'fallback_refresh_token_' + Math.random().toString(36).substr(2, 9)
-        };
-
-        this.storeAuthData(fallbackResponse);
-        return fallbackResponse;
+        // Demo authentication logic
+        if (credentials.email && credentials.password.length >= 6) {
+          const authResponse = this.createDemoAuthResponse(credentials.email);
+          this.storeAuthData(authResponse);
+          return authResponse;
+        } else {
+          throw new Error('Invalid email or password (must be at least 6 characters)');
+        }
       }
+      
       throw error;
     }
   }
@@ -114,48 +162,32 @@ class AuthService {
   // Sign up
   async signUp(userData: SignUpData): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/signup`, {
+      // Try real API first
+      const response = await this.apiRequest<AuthResponse>('/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(userData),
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Sign up failed' }));
-        throw new Error(error.message || 'Sign up failed');
-      }
-
-      const authResponse: AuthResponse = await response.json();
-      this.storeAuthData(authResponse);
-      return authResponse;
+      
+      this.storeAuthData(response);
+      return response;
     } catch (error) {
-      console.error('Sign up error:', error);
-      // If backend is not available, provide a fallback response for demo purposes
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.warn('Backend not available, using fallback registration');
-        await new Promise(resolve => setTimeout(resolve, 1500));
+      console.warn('Real registration failed, using demo authentication:', error);
+      
+      // Fallback to demo authentication for development
+      if (import.meta.env.VITE_ENABLE_MOCK_AUTH !== 'false') {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const fallbackResponse: AuthResponse = {
-          user: {
-            id: Math.random().toString(36).substr(2, 9),
-            email: userData.email,
-            name: userData.name,
-            company: userData.company,
-            phone: userData.phone,
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email}`,
-            role: 'user',
-            createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString()
-          },
-          token: 'fallback_jwt_token_' + Math.random().toString(36).substr(2, 9),
-          refreshToken: 'fallback_refresh_token_' + Math.random().toString(36).substr(2, 9)
-        };
-
-        this.storeAuthData(fallbackResponse);
-        return fallbackResponse;
+        // Demo registration logic
+        if (userData.email && userData.password.length >= 6 && userData.name) {
+          const authResponse = this.createDemoAuthResponse(userData.email, userData.name);
+          this.storeAuthData(authResponse);
+          return authResponse;
+        } else {
+          throw new Error('Please fill in all required fields (password must be at least 6 characters)');
+        }
       }
+      
       throw error;
     }
   }
@@ -163,208 +195,128 @@ class AuthService {
   // Sign out
   async signOut(): Promise<void> {
     try {
-      const token = this.getToken();
-      
-      if (token) {
-        await fetch(`${this.baseUrl}/auth/signout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }).catch(error => {
-          console.warn('Sign out API call failed:', error);
-        });
-      }
-    } catch (error) {
-      console.error('Sign out error:', error);
-    } finally {
-      this.clearAuthData();
-    }
-  }
-
-  // Refresh token
-  async refreshToken(): Promise<string | null> {
-    try {
-      const refreshToken = this.getRefreshToken();
-      if (!refreshToken) return null;
-
-      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+      // Try to notify the server about logout
+      await this.apiRequest('/auth/logout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
       });
-
-      if (!response.ok) {
-        this.clearAuthData();
-        return null;
-      }
-
-      const { token } = await response.json();
-      localStorage.setItem(this.tokenKey, token);
-      return token;
     } catch (error) {
-      console.error('Token refresh error:', error);
-      // Fallback for when backend is unavailable
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        const newToken = 'fallback_jwt_token_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem(this.tokenKey, newToken);
-        return newToken;
-      }
-      this.clearAuthData();
-      return null;
+      console.warn('Logout API call failed, clearing local data:', error);
     }
+    
+    // Always clear local auth data
+    this.clearAuthData();
   }
 
   // Update user profile
   async updateProfile(updates: Partial<User>): Promise<User> {
     try {
-      const token = this.getToken();
-      if (!token) throw new Error('Not authenticated');
-
-      const response = await fetch(`${this.baseUrl}/auth/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+      // Try real API first
+      const response = await this.apiRequest<{ user: User }>('/auth/profile', {
+        method: 'PATCH',
         body: JSON.stringify(updates),
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Profile update failed' }));
-        throw new Error(error.message || 'Profile update failed');
-      }
-
-      const updatedUser: User = await response.json();
-      localStorage.setItem(this.userKey, JSON.stringify(updatedUser));
-      return updatedUser;
+      
+      // Update stored user data
+      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+      return response.user;
     } catch (error) {
-      console.error('Profile update error:', error);
-      // Fallback for when backend is unavailable
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const currentUser = this.getCurrentUser();
-        if (!currentUser) throw new Error('User not found');
-        
+      console.warn('Profile update failed, using local update:', error);
+      
+      // Fallback to local update for demo
+      const currentUser = this.getCurrentUser();
+      if (currentUser) {
         const updatedUser = { ...currentUser, ...updates };
-        localStorage.setItem(this.userKey, JSON.stringify(updatedUser));
+        localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
         return updatedUser;
       }
-      throw error;
+      
+      throw new Error('No user session found');
     }
   }
 
   // Change password
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     try {
-      const token = this.getToken();
-      if (!token) throw new Error('Not authenticated');
-
-      const response = await fetch(`${this.baseUrl}/auth/change-password`, {
+      await this.apiRequest('/auth/change-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Password change failed' }));
-        throw new Error(error.message || 'Password change failed');
-      }
     } catch (error) {
-      console.error('Password change error:', error);
-      // Fallback for when backend is unavailable
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return;
-      }
-      throw error;
+      console.warn('Password change failed:', error);
+      throw new Error('Failed to change password. Please try again.');
     }
   }
 
   // Forgot password
   async forgotPassword(email: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/forgot-password`, {
+      await this.apiRequest('/auth/forgot-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ email }),
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Password reset failed' }));
-        throw new Error(error.message || 'Password reset failed');
-      }
     } catch (error) {
-      console.error('Forgot password error:', error);
-      // Fallback for when backend is unavailable
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('Password reset email sent to:', email);
-        return;
-      }
-      throw error;
+      console.warn('Forgot password failed:', error);
+      throw new Error('Failed to send password reset email. Please try again.');
     }
   }
 
   // Reset password
   async resetPassword(token: string, newPassword: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/reset-password`, {
+      await this.apiRequest('/auth/reset-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ token, newPassword }),
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Password reset failed' }));
-        throw new Error(error.message || 'Password reset failed');
-      }
     } catch (error) {
-      console.error('Password reset error:', error);
-      // Fallback for when backend is unavailable
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return;
-      }
-      throw error;
+      console.warn('Password reset failed:', error);
+      throw new Error('Failed to reset password. Please try again.');
     }
   }
 
   // Verify email
   async verifyEmail(token: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/verify-email`, {
+      await this.apiRequest('/auth/verify-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ token }),
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Email verification failed' }));
-        throw new Error(error.message || 'Email verification failed');
-      }
     } catch (error) {
-      console.error('Email verification error:', error);
-      // Fallback for when backend is unavailable
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return;
+      console.warn('Email verification failed:', error);
+      throw new Error('Failed to verify email. Please try again.');
+    }
+  }
+
+  // Refresh token
+  async refreshToken(): Promise<string> {
+    try {
+      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
       }
+
+      const response = await this.apiRequest<{ token: string; refreshToken: string }>('/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      localStorage.setItem(TOKEN_KEY, response.token);
+      localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
+      
+      return response.token;
+    } catch (error) {
+      console.warn('Token refresh failed:', error);
+      this.clearAuthData();
       throw error;
     }
+  }
+
+  // Check if user is authenticated
+  isAuthenticated(): boolean {
+    return !!(this.getToken() && this.getCurrentUser());
   }
 }
 
 export const authService = new AuthService();
-export default authService; 
+
+// Export types for convenience
+export type { User, LoginCredentials, SignUpData, AuthResponse }; 

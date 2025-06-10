@@ -20,9 +20,9 @@ export default defineConfig(({ mode }) => ({
     },
   },
   define: {
-    // Production environment variables
+    // Environment variables that will be available in the app
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-      'https://devdesk-nexus-hub.onrender.com'
+      process.env.VITE_API_BASE_URL || 'https://devdesk-nexus-hub.onrender.com'
     ),
   },
 }));

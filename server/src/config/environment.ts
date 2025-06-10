@@ -8,7 +8,7 @@ import { z } from 'zod';
 // Environment schema (removing JWT_REFRESH_SECRET as requested)
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('3000'),
+  PORT: z.string().transform(Number).default('3001'),
   HOST: z.string().default('0.0.0.0'),
   
   // Database

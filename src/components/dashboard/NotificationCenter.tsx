@@ -3,393 +3,396 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, 
   X, 
-  CheckCircle, 
+  Check, 
   AlertCircle, 
   Info, 
   GitBranch, 
-  Server, 
-  Database, 
-  Globe, 
-  Clock,
-  ExternalLink,
+  MessageSquare, 
+  Calendar, 
+  User,
   Settings,
   Trash2,
-  CheckCircle2,
-  Filter
+  Mail,
+  Filter,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 interface Notification {
   id: string;
-  type: 'deployment' | 'cicd' | 'uptime' | 'security' | 'system';
   title: string;
   message: string;
-  timestamp: Date;
+  type: 'info' | 'warning' | 'success' | 'error';
+  category: 'system' | 'project' | 'team' | 'meeting' | 'deployment';
+  timestamp: string;
   read: boolean;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  source: 'vercel' | 'render' | 'supabase' | 'github' | 'uptimerobot' | 'system';
   actionUrl?: string;
+  actionLabel?: string;
+  avatar?: string;
   metadata?: Record<string, any>;
 }
 
 interface NotificationCenterProps {
-  isOpen: boolean;
   onClose: () => void;
 }
 
-const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
+const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: '1',
-      type: 'deployment',
       title: 'Deployment Successful',
-      message: 'Frontend deployed to Vercel successfully. Build time: 2m 34s',
-      timestamp: new Date(Date.now() - 2 * 60 * 1000),
+      message: 'Your application has been successfully deployed to production.',
+      type: 'success',
+      category: 'deployment',
+      timestamp: '2 minutes ago',
       read: false,
-      priority: 'medium',
-      source: 'vercel',
-      actionUrl: 'https://devdesk-nexus.vercel.app',
-      metadata: { buildTime: '2m 34s', commit: 'feat: add deployment dashboard' }
+      actionUrl: '/deployment',
+      actionLabel: 'View Details'
     },
     {
       id: '2',
-      type: 'cicd',
-      title: 'CI/CD Pipeline Running',
-      message: 'Backend deployment pipeline started. Estimated completion: 3 minutes',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
+      title: 'New Team Member',
+      message: 'Sarah Johnson has joined the E-commerce Platform project.',
+      type: 'info',
+      category: 'team',
+      timestamp: '15 minutes ago',
       read: false,
-      priority: 'low',
-      source: 'github',
-      metadata: { branch: 'main', pipeline: 'backend-deploy' }
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah'
     },
     {
       id: '3',
-      type: 'uptime',
-      title: 'Service Restored',
-      message: 'Backend API is now operational. Downtime: 2 minutes',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000),
+      title: 'Meeting Reminder',
+      message: 'Daily standup meeting starts in 10 minutes.',
+      type: 'warning',
+      category: 'meeting',
+      timestamp: '25 minutes ago',
       read: true,
-      priority: 'high',
-      source: 'uptimerobot',
-      metadata: { downtime: '2 minutes', service: 'Backend API' }
+      actionUrl: '/meetings',
+      actionLabel: 'Join Meeting'
     },
     {
       id: '4',
-      type: 'security',
-      title: 'Security Scan Complete',
-      message: 'No vulnerabilities found in latest deployment',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      read: true,
-      priority: 'medium',
-      source: 'system',
-      metadata: { vulnerabilities: 0, scannedFiles: 247 }
+      title: 'Pull Request Review',
+      message: 'Mike Johnson requested review for PR #123 in mobile-app repository.',
+      type: 'info',
+      category: 'project',
+      timestamp: '1 hour ago',
+      read: false,
+      actionUrl: '/github',
+      actionLabel: 'Review PR'
     },
     {
       id: '5',
-      type: 'deployment',
-      title: 'Database Migration',
-      message: 'Schema migration completed successfully on Supabase',
-      timestamp: new Date(Date.now() - 60 * 60 * 1000),
-      read: true,
-      priority: 'medium',
-      source: 'supabase',
-      metadata: { migration: 'add_notifications_table', duration: '1.2s' }
+      title: 'System Maintenance',
+      message: 'Scheduled maintenance will occur tonight from 2-4 AM UTC.',
+      type: 'warning',
+      category: 'system',
+      timestamp: '2 hours ago',
+      read: true
+    },
+    {
+      id: '6',
+      title: 'Build Failed',
+      message: 'Build #456 failed for the authentication-service repository.',
+      type: 'error',
+      category: 'deployment',
+      timestamp: '3 hours ago',
+      read: false,
+      actionUrl: '/builds',
+      actionLabel: 'View Logs'
     }
   ]);
 
-  const [filter, setFilter] = useState<'all' | 'unread' | 'deployment' | 'cicd' | 'uptime'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | Notification['category']>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const getNotificationIcon = (type: string, source: string) => {
-    switch (type) {
-      case 'deployment':
-        return source === 'vercel' ? <Globe className="w-4 h-4" /> : <Server className="w-4 h-4" />;
-      case 'cicd':
-        return <GitBranch className="w-4 h-4" />;
-      case 'uptime':
-        return <Server className="w-4 h-4" />;
-      case 'security':
-        return <AlertCircle className="w-4 h-4" />;
-      case 'system':
-        return <Info className="w-4 h-4" />;
-      default:
-        return <Bell className="w-4 h-4" />;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-blue-500';
-      case 'low': return 'bg-gray-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getSourceBadge = (source: string) => {
-    const sourceConfig = {
-      vercel: { label: 'Vercel', color: 'bg-black text-white' },
-      render: { label: 'Render', color: 'bg-purple-600 text-white' },
-      supabase: { label: 'Supabase', color: 'bg-green-600 text-white' },
-      github: { label: 'GitHub', color: 'bg-gray-800 text-white' },
-      uptimerobot: { label: 'UptimeRobot', color: 'bg-blue-600 text-white' },
-      system: { label: 'System', color: 'bg-gray-600 text-white' }
-    };
-
-    const config = sourceConfig[source as keyof typeof sourceConfig] || sourceConfig.system;
-    return <Badge className={`${config.color} text-xs`}>{config.label}</Badge>;
-  };
-
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  };
-
+  // Filter notifications based on current filter and search query
   const filteredNotifications = notifications.filter(notification => {
-    if (filter === 'all') return true;
-    if (filter === 'unread') return !notification.read;
-    return notification.type === filter;
+    const matchesFilter = filter === 'all' || 
+      (filter === 'unread' && !notification.read) ||
+      (filter !== 'all' && filter !== 'unread' && notification.category === filter);
+    
+    const matchesSearch = !searchQuery || 
+      notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notification.message.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesFilter && matchesSearch;
   });
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAsRead = (id: string) => {
     setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
+      prev.map(notification => 
+        notification.id === id 
+          ? { ...notification, read: true }
+          : notification
+      )
     );
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAsUnread = (id: string) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id 
+          ? { ...notification, read: false }
+          : notification
+      )
+    );
   };
 
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
   };
 
   const clearAll = () => {
     setNotifications([]);
   };
 
+  const getIcon = (type: Notification['type'], category: Notification['category']) => {
+    if (category === 'deployment') return GitBranch;
+    if (category === 'meeting') return Calendar;
+    if (category === 'team') return User;
+    if (category === 'project') return MessageSquare;
+    if (category === 'system') return Settings;
+    
+    switch (type) {
+      case 'success': return Check;
+      case 'warning': return AlertCircle;
+      case 'error': return AlertCircle;
+      default: return Info;
+    }
+  };
+
+  const getIconColor = (type: Notification['type']) => {
+    switch (type) {
+      case 'success': return 'text-green-500 bg-green-100';
+      case 'warning': return 'text-yellow-500 bg-yellow-100';
+      case 'error': return 'text-red-500 bg-red-100';
+      default: return 'text-blue-500 bg-blue-100';
+    }
+  };
+
+  const getCategoryLabel = (category: Notification['category']) => {
+    switch (category) {
+      case 'deployment': return 'Deploy';
+      case 'meeting': return 'Meeting';
+      case 'team': return 'Team';
+      case 'project': return 'Project';
+      case 'system': return 'System';
+      default: return category;
+    }
+  };
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+    <div className="h-full flex flex-col bg-white">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <Bell className="w-5 h-5 text-gray-700" />
+            <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+            {unreadCount > 0 && (
+              <Badge className="bg-red-500 text-white">{unreadCount}</Badge>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-          />
-
-          {/* Notification Panel */}
-          <motion.div
-            initial={{ opacity: 0, x: 400, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 400, scale: 0.95 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed top-4 right-4 w-96 max-h-[80vh] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 z-50 overflow-hidden"
+            className="text-gray-500 hover:text-gray-700"
           >
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200/50 bg-white/50">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <Bell className="w-5 h-5 text-gray-700" />
-                  <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
-                  {unreadCount > 0 && (
-                    <Badge className="bg-red-500 text-white text-xs px-2 py-1">
-                      {unreadCount}
-                    </Badge>
-                  )}
-                </div>
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
 
-              {/* Filter Tabs */}
-              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-                {[
-                  { key: 'all', label: 'All' },
-                  { key: 'unread', label: 'Unread' },
-                  { key: 'deployment', label: 'Deploy' },
-                  { key: 'cicd', label: 'CI/CD' },
-                  { key: 'uptime', label: 'Uptime' }
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setFilter(tab.key as any)}
-                    className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                      filter === tab.key
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search notifications..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-between mt-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={markAllAsRead}
-                  disabled={unreadCount === 0}
-                  className="text-xs"
-                >
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Mark all read
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAll}
-                  className="text-xs text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  Clear all
-                </Button>
-              </div>
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'all' as const, label: 'All' },
+            { key: 'unread' as const, label: 'Unread' },
+            { key: 'system' as const, label: 'System' },
+            { key: 'project' as const, label: 'Project' },
+            { key: 'team' as const, label: 'Team' },
+            { key: 'meeting' as const, label: 'Meeting' },
+            { key: 'deployment' as const, label: 'Deploy' }
+          ].map(({ key, label }) => (
+            <Button
+              key={key}
+              variant={filter === key ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter(key)}
+              className="text-xs"
+            >
+              {label}
+              {key === 'unread' && unreadCount > 0 && (
+                <Badge className="ml-1 bg-red-500 text-white text-xs">{unreadCount}</Badge>
+              )}
+            </Button>
+          ))}
+        </div>
+
+        {/* Actions */}
+        {notifications.length > 0 && (
+          <div className="flex justify-between mt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+              className="text-xs"
+            >
+              Mark All Read
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAll}
+              className="text-xs text-red-600 hover:text-red-700"
+            >
+              Clear All
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Notifications List */}
+      <div className="flex-1 overflow-y-auto">
+        <AnimatePresence>
+          {filteredNotifications.length === 0 ? (
+            <div className="p-8 text-center">
+              <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {searchQuery ? 'No matching notifications' : 'No notifications'}
+              </h3>
+              <p className="text-gray-500">
+                {searchQuery 
+                  ? `No notifications found matching "${searchQuery}"`
+                  : "You're all caught up! No new notifications."
+                }
+              </p>
             </div>
-
-            {/* Notifications List */}
-            <ScrollArea className="flex-1 max-h-96">
-              <div className="p-2">
-                {filteredNotifications.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No notifications</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredNotifications.map((notification) => (
-                      <motion.div
-                        key={notification.id}
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer group ${
-                          notification.read
-                            ? 'bg-gray-50/50 border-gray-200/50'
-                            : 'bg-blue-50/50 border-blue-200/50 shadow-sm'
-                        }`}
-                        onClick={() => !notification.read && markAsRead(notification.id)}
-                      >
-                        <div className="flex items-start space-x-3">
-                          {/* Priority Indicator */}
-                          <div className={`w-1 h-12 rounded-full ${getPriorityColor(notification.priority)} flex-shrink-0`} />
+          ) : (
+            filteredNotifications.map((notification, index) => {
+              const Icon = getIcon(notification.type, notification.category);
+              return (
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                  className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                    !notification.read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${getIconColor(notification.type)}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className={`text-sm font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                          {notification.title}
+                        </h4>
+                        <Badge variant="outline" className="text-xs">
+                          {getCategoryLabel(notification.category)}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-2">
+                        {notification.message}
+                      </p>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {notification.timestamp}
+                        </span>
+                        
+                        <div className="flex items-center space-x-2">
+                          {notification.actionUrl && notification.actionLabel && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-6 px-2"
+                              onClick={() => {
+                                // In a real app, you'd navigate to the URL
+                                console.log('Navigate to:', notification.actionUrl);
+                                markAsRead(notification.id);
+                              }}
+                            >
+                              {notification.actionLabel}
+                            </Button>
+                          )}
                           
-                          {/* Icon */}
-                          <div className={`p-2 rounded-lg flex-shrink-0 ${
-                            notification.type === 'deployment' ? 'bg-green-100 text-green-600' :
-                            notification.type === 'cicd' ? 'bg-blue-100 text-blue-600' :
-                            notification.type === 'uptime' ? 'bg-orange-100 text-orange-600' :
-                            notification.type === 'security' ? 'bg-red-100 text-red-600' :
-                            'bg-gray-100 text-gray-600'
-                          }`}>
-                            {getNotificationIcon(notification.type, notification.source)}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <h3 className={`text-sm font-medium truncate ${
-                                notification.read ? 'text-gray-700' : 'text-gray-900'
-                              }`}>
-                                {notification.title}
-                              </h3>
-                              {getSourceBadge(notification.source)}
-                            </div>
-                            
-                            <p className={`text-xs leading-relaxed mb-2 ${
-                              notification.read ? 'text-gray-500' : 'text-gray-600'
-                            }`}>
-                              {notification.message}
-                            </p>
-
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2 text-xs text-gray-500">
-                                <Clock className="w-3 h-3" />
-                                <span>{formatTimestamp(notification.timestamp)}</span>
-                              </div>
-
-                              <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {notification.actionUrl && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    asChild
-                                  >
-                                    <a href={notification.actionUrl} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLink className="w-3 h-3" />
-                                    </a>
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteNotification(notification.id);
-                                  }}
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Metadata */}
-                            {notification.metadata && (
-                              <div className="mt-2 pt-2 border-t border-gray-200/50">
-                                <div className="flex flex-wrap gap-1">
-                                  {Object.entries(notification.metadata).map(([key, value]) => (
-                                    <span
-                                      key={key}
-                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600"
-                                    >
-                                      {key}: {value}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => notification.read ? markAsUnread(notification.id) : markAsRead(notification.id)}
+                            className="text-xs h-6 w-6 p-0"
+                            title={notification.read ? 'Mark as unread' : 'Mark as read'}
+                          >
+                            {notification.read ? <Mail className="w-3 h-3" /> : <Check className="w-3 h-3" />}
+                          </Button>
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteNotification(notification.id)}
+                            className="text-xs h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            title="Delete notification"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
-                      </motion.div>
-                    ))}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                </motion.div>
+              );
+            })
+          )}
+        </AnimatePresence>
+      </div>
 
-            {/* Footer */}
-            <div className="p-3 border-t border-gray-200/50 bg-white/50">
-              <Button variant="ghost" size="sm" className="w-full text-xs">
-                <Settings className="w-3 h-3 mr-1" />
-                Notification Settings
-              </Button>
-            </div>
-          </motion.div>
-        </>
+      {/* Footer */}
+      {notifications.length > 0 && (
+        <div className="p-4 border-t border-gray-200 flex-shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-sm"
+            onClick={() => {
+              // In a real app, navigate to full notifications page
+              console.log('View all notifications');
+            }}
+          >
+            View All Notifications
+          </Button>
+        </div>
       )}
-    </AnimatePresence>
+    </div>
   );
 };
 

@@ -2,14 +2,13 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  avatar?: string;
+  role: 'admin' | 'user' | 'moderator';
   company?: string;
   phone?: string;
-  avatar?: string;
-  role: 'user' | 'admin' | 'moderator';
-  isEmailVerified?: boolean;
   createdAt: string;
-  updatedAt?: string;
-  lastLoginAt?: string;
+  lastLoginAt: string;
+  isEmailVerified?: boolean;
   preferences?: UserPreferences;
 }
 
@@ -18,10 +17,10 @@ export interface UserPreferences {
   notifications: {
     email: boolean;
     push: boolean;
-    marketing: boolean;
+    slack: boolean;
   };
-  language: string;
   timezone: string;
+  language: string;
 }
 
 export interface AuthState {
@@ -52,7 +51,13 @@ export interface AuthResponse {
   user: User;
   token: string;
   refreshToken: string;
-  expiresIn: number;
+  expiresAt?: string;
+}
+
+export interface AuthError {
+  message: string;
+  code: string;
+  field?: string;
 }
 
 export interface PasswordResetRequest {
@@ -61,12 +66,14 @@ export interface PasswordResetRequest {
 
 export interface PasswordReset {
   token: string;
-  newPassword: string;
+  password: string;
+  confirmPassword: string;
 }
 
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 export interface EmailVerification {
@@ -75,13 +82,121 @@ export interface EmailVerification {
 
 export interface OAuthProvider {
   name: string;
+  id: 'google' | 'github' | 'microsoft';
   clientId: string;
   redirectUri: string;
-  scope: string[];
+  scopes: string[];
 }
 
 export interface OAuthState {
   provider: string;
   action: 'signin' | 'signup';
   redirectTo?: string;
+}
+
+export interface OAuthResponse {
+  provider: string;
+  code: string;
+  state: string;
+  error?: string;
+}
+
+export interface Session {
+  id: string;
+  userId: string;
+  token: string;
+  refreshToken: string;
+  expiresAt: string;
+  lastActivity: string;
+  userAgent?: string;
+  ipAddress?: string;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  signIn: (credentials: LoginCredentials) => Promise<void>;
+  signUp: (userData: SignUpData) => Promise<void>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
+  clearError: () => void;
+  refreshToken: () => Promise<void>;
+}
+
+export interface UseAuthReturn extends AuthContextType {
+  // Additional hook-specific methods can be added here
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
+  error?: AuthError;
+  timestamp: string;
+}
+
+export interface AuthApiResponse extends ApiResponse<{
+  user: User;
+  token: string;
+  refreshToken: string;
+  expiresAt: string;
+}> {}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+export interface FormValidationState {
+  isValid: boolean;
+  errors: Record<string, string>;
+  touched: Record<string, boolean>;
+}
+
+export interface SecuritySettings {
+  twoFactorEnabled: boolean;
+  backupCodes: string[];
+  trustedDevices: TrustedDevice[];
+  loginHistory: LoginAttempt[];
+}
+
+export interface TrustedDevice {
+  id: string;
+  name: string;
+  type: 'mobile' | 'desktop' | 'tablet';
+  lastUsed: string;
+  ipAddress: string;
+  userAgent: string;
+}
+
+export interface LoginAttempt {
+  id: string;
+  timestamp: string;
+  ipAddress: string;
+  userAgent: string;
+  success: boolean;
+  reason?: string;
+  location?: {
+    country: string;
+    city: string;
+    region: string;
+  };
+}
+
+export interface TwoFactorSetup {
+  secret: string;
+  qrCode: string;
+  backupCodes: string[];
+}
+
+export interface TwoFactorVerification {
+  token: string;
+  backupCode?: string;
 } 
